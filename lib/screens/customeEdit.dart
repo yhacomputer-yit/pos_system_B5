@@ -25,43 +25,95 @@ class _CustomerAddandEditState extends State<CustomerAddandEdit> {
     _loadCustomer();
   }
 
-  Future<void> _loadCustomer() async {
+Future<void> _loadCustomer() async {
     if (widget.customerId > 0) {
-      final customers = await DatabaseService().cusgetAll();
-      _currentCustomer = customers.firstWhere(
-        (c) => c.id == widget.customerId,
-        orElse: () => throw Exception('Customer not found'),
-      );
-      _nameController.text = _currentCustomer!.name;
-      _emailController.text = _currentCustomer!.email;
-      _phoneController.text = _currentCustomer!.phone;
+      _currentCustomer = await DatabaseService().cusgetById(widget.customerId);
+      if (_currentCustomer != null) {
+        _nameController.text = _currentCustomer!.name;
+        _emailController.text = _currentCustomer!.email;
+        _phoneController.text = _currentCustomer!.phone;
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Customer not found, returning...')),
+          );
+          Navigator.pop(context);
+        }
+        return;
+      }
     }
     setState(() {
       _isLoading = false;
     });
   }
 
-  Future<void> _saveCustomer() async {
-    if (_formKey.currentState!.validate()) {
-      final customer = Customer(
-        id: widget.customerId > 0 ? widget.customerId : 0, // 0 for insert
-        name: _nameController.text,
-        email: _emailController.text,
-        phone: _phoneController.text,
-      );
+  Future<void> _deleteCustomer() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Customer'),
+        content: const Text('Are you sure? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
 
+    if (confirm == true) {
       try {
-        if (widget.customerId > 0) {
-          await DatabaseService().cusupdate(customer);
-        } else {
-          await DatabaseService().cussave(customer);
-        }
+        await DatabaseService().cusdelete(widget.customerId);
         if (mounted) {
-          Navigator.pop(context, true);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Customer deleted successfully!')),
+          );
+          Navigator.pop(context, true); // Refresh list
         }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error saving customer: $e')),
+          SnackBar(content: Text('Error deleting customer: $e')),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveCustomer() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Customer'),
+        content: const Text('Are you sure? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await DatabaseService().cusdelete(widget.customerId);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Customer deleted successfully!')),
+          );
+          Navigator.pop(context, true); // Refresh list
+        }
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting customer: $e')),
         );
       }
     }
@@ -137,6 +189,23 @@ class _CustomerAddandEditState extends State<CustomerAddandEdit> {
                         ),
                       ),
                     ),
+                    if (isEdit) ...[
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: _deleteCustomer,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.red,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          child: const Text(
+                            'Delete Customer',
+                            style: TextStyle(fontSize: 18, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
                   ],
                 ),
               ),

@@ -19,11 +19,54 @@ class _CustomerPageState extends State<CustomerPage> {
     setState(() {});
   }
 
+  Future<void> _deleteCustomer(int id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Customer'),
+        content: const Text('Are you sure you want to delete this customer? This cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Delete', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      try {
+        await DatabaseService().cusdelete(id);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Customer deleted successfully!')),
+        );
+        _refreshCustomers();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error deleting customer: $e')),
+        );
+      }
+    }
+  }
+
   // New add form controllers
   final _formKey = GlobalKey<FormState>();
+
+
+
+  
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
+
+
+
+
+
 
   Future<void> _addCustomer() async {
     if (_formKey.currentState!.validate()) {
@@ -178,7 +221,42 @@ class _CustomerPageState extends State<CustomerPage> {
                               if (customer.phone.isNotEmpty) Text(customer.phone),
                             ],
                           ),
-                          trailing: const Icon(Icons.edit, color: Colors.orange),
+                          trailing: PopupMenuButton<String>(
+                            onSelected: (value) {
+                              if (value == 'edit') {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => CustomerAddandEdit(customerId: customer.id),
+                                  ),
+                                ).then((_) => _refreshCustomers());
+                              } else if (value == 'delete') {
+                                _deleteCustomer(customer.id);
+                              }
+                            },
+                            itemBuilder: (context) => [
+                              const PopupMenuItem(
+                                value: 'edit',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.edit, color: Colors.orange),
+                                    SizedBox(width: 8),
+                                    Text('Edit'),
+                                  ],
+                                ),
+                              ),
+                              const PopupMenuItem(
+                                value: 'delete',
+                                child: Row(
+                                  children: [
+                                    Icon(Icons.delete, color: Colors.red),
+                                    SizedBox(width: 8),
+                                    Text('Delete', style: TextStyle(color: Colors.red)),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       );
                     },

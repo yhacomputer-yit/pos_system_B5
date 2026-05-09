@@ -31,14 +31,14 @@ stock INTEGER
 ''');
     await db.execute('''
 CREATE TABLE $tablecustomer(
-id INTEGER PRIMARY KEY,
+id INTEGER PRIMARY KEY AUTOINCREMENT,
 name TEXT,
 phone TEXT,
 email TEXT
 )
 ''');
     await db.execute('''
-CREATE TABLE $tableorder(
+CREATE TABLE `$tableorder`(
 id INTEGER PRIMARY KEY,
 customerId INTEGER,
 items TEXT,
@@ -49,10 +49,17 @@ date TEXT
   }
 
   // All-in-one helper methods
+  //to save customer
 Future<int> cussave(Customer c) async => await (await database).insert(tablecustomer, c.toMap());
-
+// to get customer all data
 Future<List<Customer>> cusgetAll() async => (await (await database).query(tablecustomer))
     .map((m) => Customer.fromMap(m)).toList();
+// to get customer with id for each customer that for edit and delete
+Future<Customer?> cusgetById(int id) async {
+  final maps = await (await database).query(tablecustomer, where: 'id = ?', whereArgs: [id]);
+  if (maps.isEmpty) return null;
+  return Customer.fromMap(maps.first);
+}
 
 Future<int> cusupdate(Customer c) async => await (await database).update(tablecustomer, c.toMap(), 
     where: 'id = ?', whereArgs: [c.id]);
