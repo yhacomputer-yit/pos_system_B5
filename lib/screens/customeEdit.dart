@@ -25,7 +25,7 @@ class _CustomerAddandEditState extends State<CustomerAddandEdit> {
     _loadCustomer();
   }
 
-Future<void> _loadCustomer() async {
+  Future<void> _loadCustomer() async {
     if (widget.customerId > 0) {
       _currentCustomer = await DatabaseService().cusgetById(widget.customerId);
       if (_currentCustomer != null) {
@@ -84,40 +84,58 @@ Future<void> _loadCustomer() async {
   }
 
   Future<void> _saveCustomer() async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Customer'),
-        content: const Text('Are you sure? This cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Delete', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
+    if (!_formKey.currentState!.validate()) return;
 
-    if (confirm == true) {
-      try {
-        await DatabaseService().cusdelete(widget.customerId);
+    final name = _nameController.text.trim();
+    final email = _emailController.text.trim();
+    final phone = _phoneController.text.trim();
+
+    try {
+      if (widget.customerId > 0) {
+        // Update existing customer
+        final updated = Customer(
+          id: widget.customerId,
+          name: name,
+          email: email,
+          phone: phone,
+        );
+
+        await DatabaseService().cusupdate(updated);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Customer deleted successfully!')),
+            const SnackBar(content: Text('Customer updated successfully!')),
           );
-          Navigator.pop(context, true); // Refresh list
+          Navigator.pop(context, true);
         }
-      } catch (e) {
+
+      } else {
+        // Add new customer
+        final created = Customer(
+          id: 0,
+          name: name,
+          email: email,
+          phone: phone,
+        );
+
+        await DatabaseService().cussave(created);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Customer added successfully!')),
+          );
+          Navigator.pop(context, true);
+        }
+      }
+    } catch (e) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error deleting customer: $e')),
+          SnackBar(content: Text('Error saving customer: $e')),
         );
       }
     }
   }
+
+
+
 
   @override
   void dispose() {

@@ -50,7 +50,12 @@ date TEXT
 
   // All-in-one helper methods
   //to save customer
-Future<int> cussave(Customer c) async => await (await database).insert(tablecustomer, c.toMap());
+// Insert new customer (DO NOT insert id, so AUTOINCREMENT works correctly)
+Future<int> cussave(Customer c) async {
+  final map = c.toMap();
+  map.remove('id');
+  return await (await database).insert(tablecustomer, map);
+}
 // to get customer all data
 Future<List<Customer>> cusgetAll() async => (await (await database).query(tablecustomer))
     .map((m) => Customer.fromMap(m)).toList();
